@@ -248,8 +248,8 @@ class z.conversation.ConversationRepository
   @param category [z.message.MessageCategory]
   @return [Promise] Array of z.entity.Message entities
   ###
-  get_events_for_category: (conversation_et, catogory = z.message.MessageCategory.NONE) =>
-    @conversation_service.load_events_with_category_from_db conversation_et.id, catogory
+  get_events_for_category: (conversation_et, category = z.message.MessageCategory.NONE) =>
+    @conversation_service.load_events_with_category_from_db conversation_et.id, category
     .then (events) =>
       message_ets = @event_mapper.map_json_events events, conversation_et
       return Promise.all (@_update_user_ets message_et for message_et in message_ets)
