@@ -20,7 +20,9 @@ window.z ?= {}
 z.calling ?= {}
 
 CALLING_CONFIG =
-  DEFAULT_UPDATE_INTERVAL: 30 * 60 # 30 minutes in seconds
+  UPDATE_INTERVAL_FALLBACK: 60 # 1 minute in seconds
+  UPDATE_INTERVAL_MAX: 60 * 60 # 60 minutes in seconds
+  UPDATE_INTERVAL_MIN: 20 * 60 # 20 minutes in seconds
 
 # Call repository for all calling interactions.
 class z.calling.CallingRepository
@@ -218,13 +220,19 @@ class z.calling.CallingRepository
   _update_calling_config: ->
     @calling_service.get_config()
     .then (calling_config) =>
-      timeout_in_seconds = CALLING_CONFIG.DEFAULT_UPDATE_INTERVAL # Removed reliance on "calling_config.ttl" until further notice
+      normalized_ttl = Math.min Math.max(calling_config.ttl or 0, CALLING_CONFIG.UPDATE_INTERVAL_MIN), CALLING_CONFIG.UPDATE_INTERVAL_MAX
+      timeout_in_seconds = normalized_ttl - 10
       @logger.info "Updated calling configuration - next update in #{timeout_in_seconds}s", calling_config
       @calling_config calling_config
+      return timeout_in_seconds
+    .catch (error) =>
+      @logger.warn "Failed to updated calling configuration: #{error.message}", error
+      return CALLING_CONFIG.UPDATE_INTERVAL_FALLBACK
+    .then (timeout_in_seconds) =>
       window.clearTimeout @calling_config_timeout if @calling_config_timeout
       @calling_config_timeout = window.setTimeout =>
         @_update_calling_config()
-      , 1000 * timeout_in_seconds
+      , timeout_in_seconds * 1000
 
 
   ###############################################################################
